@@ -14,6 +14,14 @@ This repository contains the firmware used to control the wire‑guided Mouse Pr
 - `docs/` – Additional project information, including tuning notes, energy‑usage explanations, and update history.
 
 ## Getting started
+1. Open the project in Arduino/ESP32 environment.
+2. Set PWM frequency and pins in `include/config.h`.
+3. Build and flash; use the serial monitor for basic telemetry.
+
+## Limitations
+At higher speeds, the pickup coil readings become less stable, which can cause the mouse to drift or jitter when approaching corners. 
+For reliable tracking, the control code automatically reduces motor speed when sensor accuracy decreases. 
+Further tuning of the coil sensitivity and signal filtering may improve high‑speed performance in future revisions.
 1. Open the project in the Arduino or ESP32 development environment.
 2. Set PWM frequency, motor pins, and other configurable parameters in `include/config.h`.
 3. Build and upload the firmware to your board.
