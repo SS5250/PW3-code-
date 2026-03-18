@@ -1,0 +1,109 @@
+// -------------------- Pin assignments --------------------
+const uint8_t PIN_MOTOR_LEFT_PWM  = 5;   // PWM capable
+const uint8_t PIN_MOTOR_RIGHT_PWM = 6;   // PWM capable
+
+
+// Track pickup (post-rectifier / envelope if possible)
+const uint8_t PIN_COIL_LEFT  = A0;
+const uint8_t PIN_COIL_RIGHT = A1;
+
+/// -------------------- Tuning parameters --------------------
+// Base speeds (0–255). 
+uint8_t  baseSpeed     = 140;   // cruise speed on straights
+uint8_t  minSpeed      = 90;    // never go below this while moving
+
+// Steering proportional gain (maps sensor error to differential PWM)
+float    Kp_steer      = 0.35;  // increase for tighter response (risk more jitter)
+
+// Corner management
+int      cornerThresh  = 80;    // abs(error) above this => corner/instability
+uint8_t  cornerCap     = 115;   // cap average speed in corners
+
+// Simple smoothing
+const uint8_t SMOOTH_N = 4;     // 1 = no smoothing; larger = smoother/slower
+
+// Safety
+const uint8_t PWM_MAX  = 255;   // do not exceed 255
+
+/// -------------------- Internal state --------------------
+int  lHist[SMOOTH_N] = {0};
+int  rHist[SMOOTH_N] = {0};
+uint8_t histIdx = 0;
+
+/// -------------------- Helpers --------------------
+int smoothRead(uint8_t pin, int* hist, uint8_t& idx) {
+  hist[idx] = analogRead(pin);             // 0..1023
+  idx = (idx + 1) % SMOOTH_N;
+  long sum = 0;
+  for (uint8_t i = 0; i < SMOOTH_N; ++i) sum += hist[i];
+  return (int)(sum / SMOOTH_N);
+}
+
+void writeMotors(int leftPWM, int rightPWM) {
+  // Constrain and prevent negative values for simple MOSFET drivers
+  leftPWM  = constrain(leftPWM,  0, PWM_MAX);
+  rightPWM = constrain(rightPWM, 0, PWM_MAX);
+
+  analogWrite(PIN_MOTOR_LEFT_PWM,  leftPWM);
+  analogWrite(PIN_MOTOR_RIGHT_PWM, rightPWM);
+
+}
+
+/// -------------------- Arduino setup/loop --------------------
+void setup() {
+  pinMode(PIN_MOTOR_LEFT_PWM,  OUTPUT);
+  pinMode(PIN_MOTOR_RIGHT_PWM, OUTPUT);
+  // pinMode(PIN_LEFT_DIR,  OUTPUT);
+  // pinMode(PIN_RIGHT_DIR, OUTPUT);
+
+  pinMode(PIN_COIL_LEFT,  INPUT);
+  pinMode(PIN_COIL_RIGHT, INPUT);
+
+  // Prime smoothing buffers
+  for (uint8_t i = 0; i < SMOOTH_N; ++i) {
+    lHist[i] = analogRead(PIN_COIL_LEFT);
+    rHist[i] = analogRead(PIN_COIL_RIGHT);
+  }
+
+  Serial.begin(115200);
+  Serial.println(F("Mouse PWM control started"));
+}
+
+void loop() {
+  // 1) Read and smooth coil signals (expect larger value when closer to wire)
+  int leftRaw  = smoothRead(PIN_COIL_LEFT,  lHist, histIdx);
+  int rightRaw = smoothRead(PIN_COIL_RIGHT, rHist, histIdx);
+
+  // 2) Compute error (positive => mouse is closer to left coil than right)
+  int error    = leftRaw - rightRaw;
+  int absError = abs(error);
+
+  // 3) Derive steering and nominal speed
+  //    Steering splits the PWM between wheels; speedCap limits in corners
+  int steering     = (int)(Kp_steer * error);     // +/- range (roughly)
+  uint8_t speedCap = (absError > cornerThresh) ? cornerCap : baseSpeed;
+  uint8_t avgSpeed = constrain(speedCap, minSpeed, PWM_MAX);
+
+  // 4) Convert to left/right PWM with differential steering
+  int leftPWM  = avgSpeed - steering;  // steer right => reduce left PWM
+  int rightPWM = avgSpeed + steering;  // steer right => increase right PWM
+
+  // 5) Clamp and drive motors
+  writeMotors(leftPWM, rightPWM);
+
+  // 6) Telemetry for quick tuning
+  static uint32_t lastPrint = 0;
+  if (millis() - lastPrint > 100) {
+    lastPrint = millis();
+    Serial.print(F("L:"));   Serial.print(leftRaw);
+    Serial.print(F(" R:"));  Serial.print(rightRaw);
+    Serial.print(F(" err:"));Serial.print(error);
+    Serial.print(F(" spd:"));Serial.print(avgSpeed);
+    Serial.print(F(" pwmL:"));Serial.print(constrain(leftPWM,0,PWM_MAX));
+    Serial.print(F(" pwmR:"));Serial.print(constrain(rightPWM,0,PWM_MAX));
+    Serial.println();
+  }
+
+  // Small loop delay; increase if the mouse jitters (lets sensors settle)
+  delay(5);
+}
