@@ -18,6 +18,10 @@ This repository contains the firmware used to control the wire‑guided Mouse Pr
 2. Set PWM frequency and pins in `include/config.h`.
 3. Build and flash; use the serial monitor for basic telemetry.
 
+## Limitations
+At higher speeds, the pickup coil readings become less stable, which can cause the mouse to drift or jitter when approaching corners. 
+For reliable tracking, the control code automatically reduces motor speed when sensor accuracy decreases. 
+Further tuning of the coil sensitivity and signal filtering may improve high‑speed performance in future revisions.
 
 ## License
 MIT
