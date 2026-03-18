@@ -18,9 +18,6 @@ This repository contains the firmware used to control the wire‑guided Mouse Pr
 2. Set PWM frequency and pins in `include/config.h`.
 3. Build and flash; use the serial monitor for basic telemetry.
 
-## Versioning
-Releases follow **Semantic Versioning** (MAJOR.MINOR.PATCH). See
-the **Releases** page for notes on changes and tuning tips.
 
 ## License
-Add your chosen license here (e.g., MIT).
+MIT
