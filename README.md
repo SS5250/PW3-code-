@@ -3,21 +3,21 @@
 This repository contains the firmware used to control the wire‑guided Mouse Project vehicle.
 
 ## What it does
-- Reads the 20 kHz track signal via pickup coils and basic filtering
-- Computes lateral error and applies closed‑loop steering
-- Drives twin DC motors using PWM (MOSFET driver)
-- Limits speed in corners when sensor tracking degrades at higher velocity
+- Detects the 20 kHz track signal using pickup coils and basic filtering
+- Calculates how far the mouse is from the centre of the wire and adjusts steering automatically
+- Controls two DC motors using PWM through a MOSFET driver
+- Reduces speed in corners when the sensors become less reliable at higher speeds
 
 ## Structure
-- `src/` – main control loop and PWM drivers
-- `include/` – headers and configuration
-- `docs/` – notes on tuning, energy usage, and release history
+- `src/` – Contains all main code for running the mouse, including the control loop, sensor reading, and PWM motor output.
+- `include/` – Holds configuration and header files, such as pin assignments and control parameters.
+- `docs/` – Stores extra project information, including tuning notes, energy‑usage explanations, and update history.
 
 ## Getting started
-1. Open the project in Arduino/ESP32 environment.
-2. Set PWM frequency and pins in `include/config.h`.
-3. Build and flash; use the serial monitor for basic telemetry.
-
+1. Open the project using an Arduino/ESP32 development environment.
+2. Set the PWM frequency, motor pins, and any configurable parameters in `include/config.h`.
+3. Build and upload the firmware, then use the serial monitor to view basic system output.
 
 ## License
 MIT
+
